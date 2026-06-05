@@ -1,30 +1,60 @@
 import { NextFunction, Request, Response } from "express";
-import { TRegister } from "./auth.types";
-import AuthService from "./auth.service";
+import { AuthService, authService } from "./auth.module";
 import { ApiResponse } from "../../utils";
 import { StatusCodes } from "http-status-codes";
 
 class AuthController {
     authService: AuthService;
-    constructor(authService: AuthService) {
+    constructor() {
         this.authService = authService;
     }
-
-    registerUser = async (req: Request, res: Response, next: NextFunction) => {
+    login = async (req: Request, res: Response, next: NextFunction) => {
         try {
-            const { email, password, name } = req.body as TRegister;
-            const result = await this.authService.registerUser(name, email, password);
-            return ApiResponse.success(res, StatusCodes.CREATED, "User registered successfully", result);
+            const { username, password } = req.body;
+            const { tokens, user } = await this.authService.login(username, password);
+            res.cookie("accessToken", tokens.accessToken, { httpOnly: true, sameSite: "none", secure: true });
+            res.cookie("refreshToken", tokens.refreshToken, { httpOnly: true, sameSite: "none", secure: true });
+            return ApiResponse.success(res, StatusCodes.OK, "Login successful", { user });
         } catch (error) {
             return next(error);
         }
-    };
+    }
 
-    loginUser = async (req: Request, res: Response, next: NextFunction) => {
+    refresh = async (req:Request, res:Response, next:NextFunction) => {
         try {
-            const { email, password } = req.body;
-            const result = await this.authService.loginUser(email, password);
-            return ApiResponse.success(res, StatusCodes.OK, "Login successful", result);
+            const { refreshToken } = req.cookies;
+            if(!refreshToken){
+                return ApiResponse.error(res, StatusCodes.BAD_REQUEST, "Unauthorized", StatusCodes.UNAUTHORIZED);
+            }
+            const { tokens, user } = await this.authService.refresh(refreshToken);
+
+            res.cookie("accessToken", tokens.accessToken, { httpOnly: true, sameSite: "none", secure: true });
+            res.cookie("refreshToken", tokens.refreshToken, { httpOnly: true, sameSite: "none", secure: true });
+            return ApiResponse.success(res, StatusCodes.OK, "Both tokens updated successfully");
+        } catch (error) {
+            return next(error);
+        }
+    }
+
+    me = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+        const cookies = req.cookies;
+        const { accessToken } = cookies;
+        if (!accessToken) {
+            return ApiResponse.error(res, StatusCodes.BAD_REQUEST, "Unauthorized", StatusCodes.UNAUTHORIZED);
+        }
+        const user = await this.authService.me(accessToken); 
+        return ApiResponse.success(res, StatusCodes.OK, "User fetched successfully", user);
+        } catch (error) {
+            return next(error);
+        }
+    }
+
+    logout = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            res.clearCookie("accessToken", { httpOnly: true, sameSite: "none", secure: true });
+            res.clearCookie("refreshToken", { httpOnly: true, sameSite: "none", secure: true });
+            return ApiResponse.success(res, StatusCodes.OK, "Logged out successfully");
         } catch (error) {
             return next(error);
         }

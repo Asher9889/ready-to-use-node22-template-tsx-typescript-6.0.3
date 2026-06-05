@@ -1,15 +1,15 @@
 import mongoose from "mongoose";
-import { envConfig } from "../config";
+import { envConfig, logger } from "../config";
 
 
 async function connectMongoDB(): Promise<void> {
     try {
-        const { mongodbUsername, mongodbPassword, mongodbCluster, mongodbDbName } = envConfig;
-        const uri = `mongodb+srv://${mongodbUsername}:${mongodbPassword}@${mongodbCluster}/${mongodbDbName}`;
+        const { mongodbUsername, mongodbPassword, mongodbCluster, mongodbDbName, mongodbConnectionString } = envConfig;
+        const uri = mongodbConnectionString;
         await mongoose.connect(uri);
-        console.log("Connected to MongoDB successfully", mongoose.connection.name);
+        logger.info("Connected to MongoDB successfully " + mongoose.connection.name);
     } catch (error) {
-        console.error("Error connecting to MongoDB:", error);
+        logger.error("Error connecting to MongoDB: "+ error);
     }
 }
 

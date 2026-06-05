@@ -1,7 +1,9 @@
 import express from "express";
 import { logger } from "./config/index";
 import apiRoutes from "./routes/index";
+import { connectMongoDB } from "./db";
 
+connectMongoDB();
 const app = express();
 
 app.get("/", (req, res) => {

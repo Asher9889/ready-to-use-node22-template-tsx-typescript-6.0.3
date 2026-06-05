@@ -1,12 +1,20 @@
-import { registerSchema } from "./auth.schema";
-import { Request } from "express";
-import z from "zod";
+export type AccessTokenPayload = {
+  id: string;
+  role: "admin" | "guard" | "viewer";
+};
 
+export type ServiceTokenPayload = {
+  type: "service";
+  service: string;
+  role: "internal";
+}
 
-type TRegister = z.infer<typeof registerSchema>;
+export type RefreshTokenPayload = {
+  id: string;
+  role: "admin" | "guard" | "viewer";
+}
 
-
-// make `user` optional so handlers remain compatible with Express Request type
-type AuthRequest = Request & { user?: { userId: string } };
-
-export type { TRegister, AuthRequest };  
+export interface ITokens {
+  accessToken: string;
+  refreshToken: string;
+}

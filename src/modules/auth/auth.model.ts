@@ -1,48 +1,51 @@
-import mongoose, { Document } from "mongoose";
+import mongoose from "mongoose";
 import argon2 from "argon2";
+import jwt from "jsonwebtoken";
+import { envConfig } from "../../config";
 
 
-export interface IUser extends Document {
-  email: string;
-  password: string;
-  name: string;
-  comparePassword(inputPassword: string): Promise<boolean>;
-  createdAt: Date;
-  updatedAt: Date;
+interface IAuth extends mongoose.Document{
+    username: string;
+    password: string;
+    role: string;
+    comparePassword(password: string): Promise<boolean>;
+    generateTokens(data: {id: string, role: string}): {accessToken: string, refreshToken: string};
 }
 
-const userSchema = new mongoose.Schema<IUser>(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
+const authSchema = new mongoose.Schema<IAuth>({
+    username: {
+        type: String,
+        required: true,
+        unique: true
     },
     password: {
-      type: String,
-      required: true,
+        type: String,
+        required: true,
+        select: false
     },
-  }, { timestamps: true }
-);
+    role: {
+        type: String,
+        enum: ["admin", "user"],
+        default: "user"
+    }
+}, {versionKey: false, timestamps: true});
 
-// hook to save hashed password before saving user document
-userSchema.pre("save", async function () {
-  if (!this.isModified("password")) return;
-  this.password = await argon2.hash(this.password);  
+authSchema.pre("save", async function(){
+   if(this.isModified("password")) {
+    this.password = await argon2.hash(this.password);
+   }
 });
 
-// method to compare input password with hashed password
-userSchema.methods.comparePassword = async function (inputPassword: string): Promise<boolean> {
-  return await argon2.verify(this.password, inputPassword);
+authSchema.methods.generateTokens = function(data: {id: string, role: string}){
+    const accessToken = jwt.sign(data, envConfig.accessSecret, { expiresIn: envConfig.accessTokenMaxAge });
+    const refreshToken = jwt.sign(data, envConfig.refreshSecret, { expiresIn: envConfig.refreshTokenMaxAge });
+    return { accessToken, refreshToken };
 }
 
-userSchema.index({ email: 1 }, { unique: true });
+authSchema.methods.comparePassword = async function(password: string){
+    return await argon2.verify(this.password, password);
+}
 
-export const UserModel = mongoose.model<IUser>("User", userSchema);
+const Auth = mongoose.model<IAuth>("Auth", authSchema);
+
+export default Auth;

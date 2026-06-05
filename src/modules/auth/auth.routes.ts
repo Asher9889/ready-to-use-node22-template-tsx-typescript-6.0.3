@@ -1,12 +1,15 @@
 import express from "express";
-import { schemaValidate } from "../../middlewares";
-import { loginSchema, registerSchema } from "./auth.schema";
 import { authController } from "./auth.module";
-    
+import { schemaValidate } from "../../middlewares";
+import loginSchema from "./auth.validation";
+
 const router = express.Router();
 
-router.post("/register", schemaValidate(registerSchema),  authController.registerUser);
+router.post("/login", schemaValidate(loginSchema), authController.login);
+router.post("/refresh", authController.refresh);
+router.get("/me", authController.me);
+router.post("/logout", authController.logout);
 
-router.post("/login", schemaValidate(loginSchema), authController.loginUser);
+// router.post("/signup", authController.signup);
 
 export default router;
