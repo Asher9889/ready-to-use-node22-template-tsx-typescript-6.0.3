@@ -6,6 +6,24 @@ import { envConfig } from "../../config";
 import { AccessTokenPayload, ITokens, RefreshTokenPayload } from "./auth.types";
 
 class AuthService {
+
+    signup = async (username: string, password: string) => {
+        try {
+            const existingUser = await Auth.findOne({ username }).lean();
+            if(existingUser){
+                throw new ApiError(StatusCodes.BAD_REQUEST, "Username already exists. Please choose another one.");
+            } 
+            const user = new Auth({ username, password });
+            const newUser = await user.save();
+            if(!newUser._id){
+                throw new ApiError(StatusCodes.INTERNAL_SERVER_ERROR, "Failed to create user. Please try again.");
+            }
+            return newUser;
+        } catch (error) {
+            throw error;
+        }
+    }
+
     login = async (username: string, password: string) => {
         try {
             const user = await Auth.findOne({ username }).select("+password")

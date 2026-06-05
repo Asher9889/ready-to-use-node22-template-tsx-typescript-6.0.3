@@ -8,6 +8,18 @@ class AuthController {
     constructor() {
         this.authService = authService;
     }
+
+    signup = async (req: Request, res: Response, next: NextFunction) => {
+        try {
+            const { username, password } = req.body;
+            const user = await this.authService.signup(username, password);
+            return ApiResponse.success(res, StatusCodes.CREATED, "User registered successfully", { user });
+        } catch (error) {
+            return next(error);
+        }
+    }
+
+
     login = async (req: Request, res: Response, next: NextFunction) => {
         try {
             const { username, password } = req.body;
